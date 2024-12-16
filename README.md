@@ -2,7 +2,7 @@
 
 *Progress*
 Backend
-- database set up on local, scheme defined and migrations done
+- database set up on local, scheme defined and migrations done, seeding done
 
 Frontend
 -
