@@ -43,42 +43,71 @@ class ProgressListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_achievements(request):
-    # Get all achievements for the user
-    user_achievements = UserAchievement.objects.filter(user=request.user)
-    
-    # If user doesn't have achievements yet, create them
-    if not user_achievements.exists():
-        achievements = Achievement.objects.all()
-        for achievement in achievements:
-            UserAchievement.objects.create(
-                user=request.user,
-                achievement=achievement
-            )
-        user_achievements = UserAchievement.objects.filter(user=request.user)
-    
-    # Group achievements by category
-    achievements_by_category = {}
-    for user_achievement in user_achievements:
-        category = user_achievement.achievement.get_category_display()
-        if category not in achievements_by_category:
-            achievements_by_category[category] = {
-                'id': len(achievements_by_category) + 1,
-                'category': category,
-                'achievements': []
-            }
+    try:
+        # Get all achievements for the user if authenticated, otherwise just get all achievements
+        if request.user.is_authenticated:
+            user_achievements = UserAchievement.objects.filter(user=request.user)
+            
+            # If user doesn't have achievements yet, create them
+            if not user_achievements.exists():
+                achievements = Achievement.objects.all()
+                for achievement in achievements:
+                    UserAchievement.objects.create(
+                        user=request.user,
+                        achievement=achievement
+                    )
+                user_achievements = UserAchievement.objects.filter(user=request.user)
+            
+            # Group achievements by category
+            achievements_by_category = {}
+            for user_achievement in user_achievements:
+                category = user_achievement.achievement.get_category_display()
+                if category not in achievements_by_category:
+                    achievements_by_category[category] = {
+                        'id': len(achievements_by_category) + 1,
+                        'category': category,
+                        'achievements': []
+                    }
+                
+                achievements_by_category[category]['achievements'].append({
+                    'title': user_achievement.achievement.title,
+                    'description': user_achievement.achievement.description,
+                    'progress': user_achievement.progress,
+                    'maxProgress': user_achievement.achievement.max_progress,
+                    'icon': user_achievement.achievement.icon,
+                    'unlocked': user_achievement.unlocked
+                })
+        else:
+            # For unauthenticated users, just show all achievements with 0 progress
+            achievements = Achievement.objects.all()
+            achievements_by_category = {}
+            
+            for achievement in achievements:
+                category = achievement.get_category_display()
+                if category not in achievements_by_category:
+                    achievements_by_category[category] = {
+                        'id': len(achievements_by_category) + 1,
+                        'category': category,
+                        'achievements': []
+                    }
+                
+                achievements_by_category[category]['achievements'].append({
+                    'title': achievement.title,
+                    'description': achievement.description,
+                    'progress': 0,
+                    'maxProgress': achievement.max_progress,
+                    'icon': achievement.icon,
+                    'unlocked': False
+                })
         
-        achievements_by_category[category]['achievements'].append({
-            'title': user_achievement.achievement.title,
-            'description': user_achievement.achievement.description,
-            'progress': user_achievement.progress,
-            'maxProgress': user_achievement.achievement.max_progress,
-            'icon': user_achievement.achievement.icon,
-            'unlocked': user_achievement.unlocked
-        })
-    
-    return Response(list(achievements_by_category.values()))
+        return Response(list(achievements_by_category.values()))
+    except Exception as e:
+        print(f"Error in get_achievements: {str(e)}")  # For debugging
+        return Response(
+            {'error': 'Failed to fetch achievements'},
+            status=500
+        )
 
 @api_view(['POST'])
 def create_guest_session(request):
