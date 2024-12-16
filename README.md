@@ -2,7 +2,7 @@
 
 *Progress*
 Backend
-- database set up on local, scheme defined and migrations done, seeding done
+- database set up on local, scheme defined and migrations done, seeding done, api end points work (NOT TESTED), development server works
 
 Frontend
 -
