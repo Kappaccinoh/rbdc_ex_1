@@ -1,7 +1,16 @@
 # rbdc_ex_1 Exercise 1 (Kids Typing Game)
 
-Progress
-- database set up on local, scheme not defined well for purpose of the game
+*Progress*
+Backend
+- database set up on local, scheme defined and migrations done
+
+Frontend
+-
+
+TODO
+- frontend nextjs app
+
+
 
 *API Routes Plan*
 User Authentication
@@ -39,6 +48,3 @@ Miscellaneous
 
     GET /api/leaderboard: Fetch the leaderboard showing top-performing users.
 
-
-TODO
-- frontend nextjs app

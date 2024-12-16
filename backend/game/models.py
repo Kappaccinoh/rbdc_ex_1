@@ -14,15 +14,22 @@ class User(AbstractUser):
 
 
 # Game Levels
+from django.db import models
+import uuid
+
 class Level(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    difficulty = models.IntegerField()  # 1 to 5
-    challenge_text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=255)  # Name of the level
+    difficulty = models.IntegerField()  # Difficulty rating (1 to 5)
+    challenge_text = models.TextField()  # Text to type in the level
+    created_at = models.DateTimeField(auto_now_add=True)  # Auto-generated timestamp for creation
 
     def __str__(self):
         return f"Level {self.name} - Difficulty {self.difficulty}"
+
+    class Meta:
+        db_table = "game_level"  # Explicitly name the table
+
 
 
 # Progress
@@ -39,15 +46,22 @@ class Progress(models.Model):
 
 
 # Achievements
+from django.db import models
+import uuid
+
 class Achievement(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    icon_url = models.TextField()  # You can use a URLField if preferred
-    created_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=255)  # Name of the achievement
+    description = models.TextField()  # Description of the achievement
+    icon_url = models.TextField()  # URL or path to the achievement icon
+    created_at = models.DateTimeField(auto_now_add=True)  # Auto-generated timestamp for creation
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        db_table = "game_achievement"  # Explicitly name the table
+
 
 
 # Rewards (User's Earned Achievements)
