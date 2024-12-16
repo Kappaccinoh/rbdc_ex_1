@@ -50,18 +50,25 @@ from django.db import models
 import uuid
 
 class Achievement(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)  # Name of the achievement
-    description = models.TextField()  # Description of the achievement
-    icon_url = models.TextField()  # URL or path to the achievement icon
-    created_at = models.DateTimeField(auto_now_add=True)  # Auto-generated timestamp for creation
+    CATEGORIES = [
+        ('SPEED', 'Speed Demon'),
+        ('ACCURACY', 'Accuracy Master'),
+        ('DEDICATION', 'Dedication'),
+        ('SPECIAL', 'Special Skills'),
+    ]
 
-    def __str__(self):
-        return self.name
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORIES)
+    icon = models.CharField(max_length=10)  # For storing emoji
+    max_progress = models.IntegerField()
 
-    class Meta:
-        db_table = "game_achievement"  # Explicitly name the table
-
+class UserAchievement(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE)
+    progress = models.IntegerField(default=0)
+    unlocked = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 # Rewards (User's Earned Achievements)
