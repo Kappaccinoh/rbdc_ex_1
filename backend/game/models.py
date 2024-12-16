@@ -6,8 +6,15 @@ import uuid
 # Custom User Model
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, null=True, blank=True)  # Make email optional for guests
+    is_guest = models.BooleanField(default=False)
+    guest_token = models.UUIDField(unique=True, null=True, blank=True)  # To identify guest users
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.is_guest and not self.guest_token:
+            self.guest_token = uuid.uuid4()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username
@@ -40,6 +47,7 @@ class Progress(models.Model):
     score = models.IntegerField()
     completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    accuracy = models.FloatField(default=0)  # Store accuracy as percentage
 
     def __str__(self):
         return f"{self.user.username} - {self.level.name} - Score: {self.score}"

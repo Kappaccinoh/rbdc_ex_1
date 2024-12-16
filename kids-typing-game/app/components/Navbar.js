@@ -47,8 +47,8 @@ export default function Navbar() {
                         </Link>
                     </li>
                     <li>
-                        <Link href="/progress" legacyBehavior>
-                            <a className="hover:text-amber-600">Progress</a>
+                        <Link href="/profile" legacyBehavior>
+                            <a className="hover:text-amber-600">My Profile</a>
                         </Link>
                     </li>
                 </ul>
