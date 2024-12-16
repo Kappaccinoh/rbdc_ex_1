@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from game.models import Level, Achievement, Progress, UserAchievement, User
+from game.models import Level, Achievement, Progress, UserAchievement, User, Streak
 from game.serializers import LevelSerializer, AchievementSerializer, ProgressSerializer, UserAchievementSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -131,3 +131,22 @@ def get_progress(request):
     }
 
     return Response(stats)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_profile(request):
+    user = request.user
+    
+    # Get user's streak
+    streak = Streak.objects.filter(user=user).first()
+    current_streak = streak.current_streak if streak else 0
+    
+    profile_data = {
+        'username': user.username,
+        'is_guest': user.is_guest,
+        'current_streak': current_streak,
+        'member_since': user.created_at.strftime("%Y-%m-%d"),
+        'email': user.email if not user.is_guest else None,
+    }
+    
+    return Response(profile_data)

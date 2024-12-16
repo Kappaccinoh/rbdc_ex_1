@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/achievements/', views.get_achievements, name='achievements'),
     path('api/auth/guest/', views.create_guest_session, name='guest-login'),
     path('api/progress/', views.get_progress, name='progress'),
+    path('api/profile/', views.get_profile, name='profile'),
 ]
