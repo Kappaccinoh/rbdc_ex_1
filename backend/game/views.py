@@ -7,11 +7,15 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import login, logout, authenticate
 from django.db.models import Avg
 
-# List all Levels
-class LevelListView(generics.ListAPIView):
-    queryset = Level.objects.all()
-    serializer_class = LevelSerializer
-    permission_classes = [permissions.AllowAny]
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_levels(request):
+    try:
+        levels = Level.objects.all()
+        serializer = LevelSerializer(levels, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': 'Failed to fetch levels'}, status=500)
 
 @api_view(['GET'])
 def get_achievements(request):
@@ -45,26 +49,17 @@ def get_achievements(request):
         )
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_profile(request):
     if not request.user.is_authenticated:
-        return Response({
-            'username': 'Guest',
-            'is_guest': True,
-            'current_streak': 0,
-            'member_since': None,
-            'email': None,
-        })
+        return Response({'authenticated': False})
     
     user = request.user
-    streak = Streak.objects.filter(user=user).first()
-    current_streak = streak.current_streak if streak else 0
-    
     return Response({
+        'authenticated': True,
         'username': user.username,
+        'email': user.email,
         'is_guest': user.is_guest,
-        'current_streak': current_streak,
-        'member_since': user.created_at.strftime("%Y-%m-%d"),
-        'email': user.email if not user.is_guest else None,
     })
 
 @api_view(['GET'])
