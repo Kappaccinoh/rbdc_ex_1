@@ -6,14 +6,15 @@ import uuid
 # Custom User Model
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(unique=True, null=True, blank=True)  # Make email optional for guests
+    email = models.EmailField(unique=True, null=True, blank=True, default=None)  # Add default=None
     is_guest = models.BooleanField(default=False)
-    guest_token = models.UUIDField(unique=True, null=True, blank=True)  # To identify guest users
+    guest_token = models.UUIDField(unique=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if self.is_guest and not self.guest_token:
+        if self.is_guest:
             self.guest_token = uuid.uuid4()
+            self.email = None  # Ensure guest users have no email
         super().save(*args, **kwargs)
 
     def __str__(self):
