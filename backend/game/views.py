@@ -105,4 +105,5 @@ def get_level_by_id(request, level_id):
     except Level.DoesNotExist:
         return Response({'error': 'Level not found'}, status=404)
     except Exception as e:
+        print(f"Error fetching level: {str(e)}")
         return Response({'error': 'Failed to fetch level'}, status=500)
