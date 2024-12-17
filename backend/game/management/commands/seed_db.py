@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from game.models import User, Streak, Achievement, UserAchievement
+from game.models import User, Streak, Achievement, UserAchievement, Level
 
 class Command(BaseCommand):
     help = 'Seeds the database with test data'
@@ -51,4 +51,23 @@ class Command(BaseCommand):
             last_active=timezone.now()
         )
 
-        self.stdout.write(self.style.SUCCESS('Successfully seeded database')) 
+        # Create levels
+        levels = [
+            Level.objects.create(
+                name='Beginner',
+                difficulty=1,
+                challenge_text='Type this simple text'
+            ),
+            Level.objects.create(
+                name='Intermediate',
+                difficulty=2,
+                challenge_text='Type this more complex text'
+            ),
+            Level.objects.create(
+                name='Advanced',
+                difficulty=3,
+                challenge_text='Type this challenging text'
+            )
+        ]
+
+        self.stdout.write(self.style.SUCCESS('Successfully seeded database with users, achievements, streaks, and levels'))
