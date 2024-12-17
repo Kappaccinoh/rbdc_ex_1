@@ -94,3 +94,15 @@ def get_progress(request):
     }
 
     return Response(stats)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_level_by_id(request, level_id):
+    try:
+        level = Level.objects.get(id=level_id)
+        serializer = LevelSerializer(level)
+        return Response(serializer.data)
+    except Level.DoesNotExist:
+        return Response({'error': 'Level not found'}, status=404)
+    except Exception as e:
+        return Response({'error': 'Failed to fetch level'}, status=500)
