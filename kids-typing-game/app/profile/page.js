@@ -3,7 +3,17 @@
 import { useState, useEffect } from 'react';
 
 export default function ProfilePage() {
-    const [userData, setUserData] = useState(null);
+    const [userData, setUserData] = useState({
+        profile: null,
+        progress: {
+            averageWPM: 0,
+            averageAccuracy: 0,
+            levelsCompleted: 0,
+            totalLevels: 0,
+            recentActivity: []
+        },
+        achievements: []
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -16,18 +26,34 @@ export default function ProfilePage() {
                     fetch('/api/achievements')
                 ]);
 
-                if (!profileRes.ok || !progressRes.ok || !achievementsRes.ok) {
-                    throw new Error('Failed to fetch user data');
-                }
-
                 const [profile, progress, achievements] = await Promise.all([
                     profileRes.json(),
                     progressRes.json(),
                     achievementsRes.json()
                 ]);
 
-                setUserData({ profile, progress, achievements });
+                console.log('Received data:', { profile, progress, achievements }); // Debug log
+
+                // Validate the data structure
+                const validAchievements = Array.isArray(achievements) ? achievements : [];
+                const validProgress = progress && typeof progress === 'object' ? progress : {
+                    averageWPM: 0,
+                    averageAccuracy: 0,
+                    levelsCompleted: 0,
+                    totalLevels: 0,
+                    recentActivity: []
+                };
+
+                setUserData({
+                    profile: profile || null,
+                    progress: {
+                        ...validProgress,
+                        recentActivity: validProgress.recentActivity || []
+                    },
+                    achievements: validAchievements
+                });
             } catch (error) {
+                console.error('Error fetching user data:', error);
                 setError(error.message);
             } finally {
                 setLoading(false);
@@ -39,7 +65,7 @@ export default function ProfilePage() {
 
     if (loading) return <div className="text-center p-8">Loading profile...</div>;
     if (error) return <div className="text-center text-red-500 p-8">Error: {error}</div>;
-    if (!userData) return <div className="text-center p-8">No user data found</div>;
+    if (!userData.profile) return <div className="text-center p-8">No user data found</div>;
 
     const { profile, progress, achievements } = userData;
 
@@ -80,7 +106,7 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-semibold text-amber-800 mb-2">Typing Speed</h3>
                     <div className="flex items-baseline">
                         <span className="text-3xl font-bold text-amber-600">
-                            {Math.round(progress.averageWPM)}
+                            {Math.round(progress.averageWPM || 0)}
                         </span>
                         <span className="ml-2 text-gray-600">WPM</span>
                     </div>
@@ -89,7 +115,7 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-semibold text-amber-800 mb-2">Accuracy</h3>
                     <div className="flex items-baseline">
                         <span className="text-3xl font-bold text-amber-600">
-                            {Math.round(progress.averageAccuracy)}%
+                            {Math.round(progress.averageAccuracy || 0)}%
                         </span>
                     </div>
                 </div>
@@ -97,7 +123,7 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-semibold text-amber-800 mb-2">Daily Streak</h3>
                     <div className="flex items-baseline">
                         <span className="text-3xl font-bold text-amber-600">
-                            {profile.current_streak}
+                            {profile.current_streak || 0}
                         </span>
                         <span className="ml-2 text-gray-600">days 🔥</span>
                     </div>
@@ -117,13 +143,13 @@ export default function ProfilePage() {
                             <div className="flex gap-4">
                                 <div className="text-right">
                                     <span className="block font-semibold text-amber-600">
-                                        {activity.wpm} WPM
+                                        {Math.round(activity.wpm || 0)} WPM
                                     </span>
                                     <span className="text-sm text-gray-600">Speed</span>
                                 </div>
                                 <div className="text-right">
                                     <span className="block font-semibold text-amber-600">
-                                        {activity.accuracy}%
+                                        {Math.round(activity.accuracy || 0)}%
                                     </span>
                                     <span className="text-sm text-gray-600">Accuracy</span>
                                 </div>
@@ -137,19 +163,25 @@ export default function ProfilePage() {
             <div className="bg-white rounded-lg shadow-lg p-6">
                 <h2 className="text-xl font-bold text-amber-800 mb-4">Recent Achievements</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {achievements.flatMap(category => 
-                        category.achievements
-                            .filter(a => a.unlocked)
-                            .slice(0, 4)
-                            .map(achievement => (
-                                <div key={achievement.title} className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
-                                    <span className="text-2xl">{achievement.icon}</span>
-                                    <div>
-                                        <h4 className="font-semibold text-amber-800">{achievement.title}</h4>
-                                        <p className="text-sm text-gray-600">{achievement.description}</p>
+                    {achievements && achievements.length > 0 ? (
+                        achievements.flatMap(category => 
+                            (category?.achievements || [])
+                                .filter(a => a?.unlocked)
+                                .slice(0, 4)
+                                .map(achievement => (
+                                    <div key={achievement.title} className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
+                                        <span className="text-2xl">{achievement.icon}</span>
+                                        <div>
+                                            <h4 className="font-semibold text-amber-800">{achievement.title}</h4>
+                                            <p className="text-sm text-gray-600">{achievement.description}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                ))
+                        )
+                    ) : (
+                        <div className="col-span-2 text-center text-gray-500">
+                            No achievements unlocked yet
+                        </div>
                     )}
                 </div>
             </div>

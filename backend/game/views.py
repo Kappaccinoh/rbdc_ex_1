@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import login
 import uuid
 from django.db.models import Avg
+from rest_framework.exceptions import PermissionDenied
 
 # List all Levels
 class LevelListView(generics.ListAPIView):
@@ -32,84 +33,73 @@ class AchievementListView(generics.ListAPIView):
 # List or Create Progress for the logged-in user
 class ProgressListCreateView(generics.ListCreateAPIView):
     serializer_class = ProgressSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Return progress for the current user
+        if not self.request.user.is_authenticated:
+            return Progress.objects.none()  # Return empty queryset for unauthenticated users
         return Progress.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Automatically set the user for the progress
-        serializer.save(user=self.request.user)
+        if self.request.user.is_authenticated:
+            serializer.save(user=self.request.user)
+        else:
+            raise PermissionDenied("Must be authenticated to create progress")
 
 @api_view(['GET'])
 def get_achievements(request):
     try:
-        # Get all achievements for the user if authenticated, otherwise just get all achievements
-        if request.user.is_authenticated:
-            user_achievements = UserAchievement.objects.filter(user=request.user)
-            
-            # If user doesn't have achievements yet, create them
-            if not user_achievements.exists():
-                achievements = Achievement.objects.all()
-                for achievement in achievements:
-                    UserAchievement.objects.create(
-                        user=request.user,
-                        achievement=achievement
-                    )
-                user_achievements = UserAchievement.objects.filter(user=request.user)
-            
-            # Group achievements by category
-            achievements_by_category = {}
-            for user_achievement in user_achievements:
-                category = user_achievement.achievement.get_category_display()
-                if category not in achievements_by_category:
-                    achievements_by_category[category] = {
-                        'id': len(achievements_by_category) + 1,
-                        'category': category,
-                        'achievements': []
-                    }
-                
-                achievements_by_category[category]['achievements'].append({
-                    'title': user_achievement.achievement.title,
-                    'description': user_achievement.achievement.description,
-                    'progress': user_achievement.progress,
-                    'maxProgress': user_achievement.achievement.max_progress,
-                    'icon': user_achievement.achievement.icon,
-                    'unlocked': user_achievement.unlocked
-                })
-        else:
-            # For unauthenticated users, just show all achievements with 0 progress
-            achievements = Achievement.objects.all()
-            achievements_by_category = {}
-            
-            for achievement in achievements:
-                category = achievement.get_category_display()
-                if category not in achievements_by_category:
-                    achievements_by_category[category] = {
-                        'id': len(achievements_by_category) + 1,
-                        'category': category,
-                        'achievements': []
-                    }
-                
-                achievements_by_category[category]['achievements'].append({
-                    'title': achievement.title,
-                    'description': achievement.description,
-                    'progress': 0,
-                    'maxProgress': achievement.max_progress,
-                    'icon': achievement.icon,
-                    'unlocked': False
-                })
+        # Get all achievements
+        achievements = Achievement.objects.all()
         
-        return Response(list(achievements_by_category.values()))
+        # Group achievements by category
+        achievements_by_category = {}
+        
+        for achievement in achievements:
+            category = achievement.get_category_display()
+            if category not in achievements_by_category:
+                achievements_by_category[category] = {
+                    'id': len(achievements_by_category) + 1,
+                    'category': category,
+                    'achievements': []
+                }
+            
+            achievement_data = {
+                'id': str(achievement.id),  # Add an ID for each achievement
+                'title': achievement.title,
+                'description': achievement.description,
+                'progress': 0,
+                'maxProgress': achievement.max_progress,
+                'icon': achievement.icon,
+                'unlocked': False
+            }
+
+            if request.user.is_authenticated:
+                user_achievement = UserAchievement.objects.filter(
+                    user=request.user,
+                    achievement=achievement
+                ).first()
+                if user_achievement:
+                    achievement_data.update({
+                        'progress': user_achievement.progress,
+                        'unlocked': user_achievement.unlocked
+                    })
+            
+            achievements_by_category[category]['achievements'].append(achievement_data)
+        
+        result = list(achievements_by_category.values())
+        print("API Response:", result)  # Debug print
+        return Response(result)
+        
     except Exception as e:
-        print(f"Error in get_achievements: {str(e)}")  # For debugging
+        print(f"Error in get_achievements: {str(e)}")
         return Response(
             {'error': 'Failed to fetch achievements'},
             status=500
         )
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_guest_session(request):
     try:
         # Create a guest user
@@ -134,23 +124,28 @@ def create_guest_session(request):
 
 # Update the progress view to handle guest users
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_progress(request):
-    user = request.user
+    if not request.user.is_authenticated:
+        return Response({
+            'averageWPM': 0,
+            'averageAccuracy': 0,
+            'levelsCompleted': 0,
+            'totalLevels': Level.objects.count(),
+            'recentActivity': []
+        })
     
-    # Get user's progress data
+    user = request.user
     progress_data = Progress.objects.filter(user=user).order_by('-created_at')
     recent_activity = []
     
-    for progress in progress_data[:5]:  # Last 5 activities
+    for progress in progress_data[:5]:
         recent_activity.append({
             'levelName': progress.level.name,
             'date': progress.created_at.strftime("%Y-%m-%d %H:%M"),
-            'wpm': progress.score,  # Assuming score represents WPM
-            'accuracy': progress.accuracy if hasattr(progress, 'accuracy') else 0
+            'wpm': progress.score,
+            'accuracy': progress.accuracy
         })
 
-    # Calculate stats
     stats = {
         'averageWPM': progress_data.aggregate(Avg('score'))['score__avg'] or 0,
         'averageAccuracy': progress_data.aggregate(Avg('accuracy'))['accuracy__avg'] or 0,
@@ -162,11 +157,17 @@ def get_progress(request):
     return Response(stats)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_profile(request):
-    user = request.user
+    if not request.user.is_authenticated:
+        return Response({
+            'username': 'Guest',
+            'is_guest': True,
+            'current_streak': 0,
+            'member_since': None,
+            'email': None,
+        })
     
-    # Get user's streak
+    user = request.user
     streak = Streak.objects.filter(user=user).first()
     current_streak = streak.current_streak if streak else 0
     

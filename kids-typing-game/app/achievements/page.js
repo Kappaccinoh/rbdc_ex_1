@@ -11,12 +11,18 @@ export default function AchievementsPage() {
         const fetchAchievements = async () => {
             try {
                 const response = await fetch('/api/achievements');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch achievements');
-                }
                 const data = await response.json();
-                setAchievements(data);
+                console.log('Received achievements data:', data);
+
+                // Check if data is an array
+                if (Array.isArray(data)) {
+                    setAchievements(data);
+                } else {
+                    console.error('Invalid data format:', data);
+                    setAchievements([]);
+                }
             } catch (error) {
+                console.error('Achievement fetch error:', error);
                 setError(error.message);
             } finally {
                 setLoading(false);
@@ -43,9 +49,9 @@ export default function AchievementsPage() {
                     <div key={category.id} className="bg-white rounded-lg shadow-lg p-6">
                         <h2 className="text-2xl font-bold text-amber-700 mb-4">{category.category}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {category.achievements.map((achievement) => (
+                            {category.achievements?.map((achievement) => (
                                 <div 
-                                    key={achievement.title}
+                                    key={achievement.id}
                                     className={`p-4 rounded-lg border-2 ${
                                         achievement.unlocked 
                                             ? 'border-amber-400 bg-amber-50' 
